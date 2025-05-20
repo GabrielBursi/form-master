@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import {
@@ -15,42 +15,47 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { LoginInput, loginSchema } from '@/schemas/auth'
+import { AuthServices } from '@/services/AuthServices'
+import { toast } from 'sonner'
+import { useAuth } from '@/context/AuthContext'
 
-const loginSchema = z.object({
-	email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
-	password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-})
 
-type LoginFormValues = z.infer<typeof loginSchema>
 
 export const Login = () => {
+	const navigate = useNavigate()
+	const { login: contextLogin, logout } = useAuth()
 	const [showPassword, setShowPassword] = useState(false)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 
 	const {
 		register,
 		handleSubmit,
-		formState: { errors },
-	} = useForm<LoginFormValues>({
+		formState: { errors, isValid },
+	} = useForm<LoginInput>({
 		resolver: zodResolver(loginSchema),
-		defaultValues: {
-			email: '',
-			password: '',
-		},
 		mode: 'onChange',
+		defaultValues: { email: '', password: '' }
 	})
 
-	const onSubmit = async (data: LoginFormValues) => {
-		try {
-			setIsSubmitting(true)
-			console.log('Dados de login:', data)
-		} catch (error) {
-			console.error('Erro no login:', error)
-		} finally {
-			setIsSubmitting(false)
+	const onSubmit = async (data: LoginInput) => {
+		setIsSubmitting(true)
+		const result = await AuthServices.Login(data)
+		setIsSubmitting(false)
+
+		if (result instanceof Error) {
+			toast.error(result.message)
+			return
 		}
+
+		contextLogin(result)
+		toast.success('Bem-vindo!')
+		navigate('/')
 	}
+
+	useEffect(() => {
+		logout()
+	}, []);
 
 	return (
 		<div className="flex items-center justify-center min-h-[80vh]">
@@ -130,7 +135,7 @@ export const Login = () => {
 						</CardContent>
 
 						<CardFooter className="flex flex-col space-y-4">
-							<Button className="w-full" type="submit" disabled={isSubmitting}>
+							<Button className="w-full" type="submit" disabled={isSubmitting || !isValid}>
 								{isSubmitting ? 'Entrando...' : 'Entrar'}
 							</Button>
 							<div className="text-center text-sm">

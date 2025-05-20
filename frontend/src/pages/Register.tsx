@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, User, Mail, LockKeyhole, Phone } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import {
@@ -22,56 +22,16 @@ import {
 } from '../components/ui/select'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { RegisterInput, registerSchema } from '@/schemas/auth'
+import { AuthServices } from '@/services/AuthServices'
+import { toast } from 'sonner'
+import { useAuth } from '@/context/AuthContext'
 
-const registerSchema = z
-	.object({
-		name: z
-			.string()
-			.min(3, 'Nome deve ter pelo menos 3 caracteres')
-			.max(100, 'Nome muito longo')
-			.transform((value) => {
-				return value
-					.trim()
-					.split(' ')
-					.map(
-						(word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-					)
-					.join(' ')
-			}),
-		phone: z
-			.string()
-			.min(14, 'Telefone inválido')
-			.max(15, 'Telefone inválido')
-			.regex(
-				/^\(\d{2}\)\s\d{5}-\d{4}$/,
-				'Formato inválido. Use (00) 00000-0000'
-			),
-		email: z
-			.string()
-			.min(1, 'Email é obrigatório')
-			.email('Formato de email inválido'),
-		profession: z.string().min(1, 'Selecione uma profissão'),
-		password: z
-			.string()
-			.min(8, 'Senha deve ter pelo menos 8 caracteres')
-			.regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
-			.regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
-			.regex(/\d/, 'Senha deve conter pelo menos um número')
-			.regex(
-				/[^A-Za-z0-9]/,
-				'Senha deve conter pelo menos um caractere especial'
-			),
-		confirmPassword: z.string().min(1, 'Confirmação de senha é obrigatória'),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: 'As senhas não coincidem',
-		path: ['confirmPassword'],
-	})
 
-type RegisterFormValues = z.infer<typeof registerSchema>
 
 export const Register = () => {
+	const navigate = useNavigate()
+	const { login: contextLogin, logout } = useAuth()
 	const [showPassword, setShowPassword] = useState(false)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -79,47 +39,41 @@ export const Register = () => {
 		register,
 		handleSubmit,
 		control,
-		formState: { errors },
-	} = useForm<RegisterFormValues>({
+		formState: { errors, isValid },
+	} = useForm<RegisterInput>({
 		resolver: zodResolver(registerSchema),
-		defaultValues: {
-			name: '',
-			phone: '',
-			email: '',
-			profession: '',
-			password: '',
-			confirmPassword: '',
-		},
 		mode: 'onChange',
+		defaultValues: {
+			name: '', phone: '', email: '', profession: '', password: '', confirmPassword: ''
+		}
 	})
 
 	const formatPhone = (value: string) => {
-		if (!value) return value
-
-		const phoneNumber = value.replace(/[^\d]/g, '')
-
-		const phoneNumberLimited = phoneNumber.substring(0, 11)
-
-		if (phoneNumberLimited.length <= 2) {
-			return `(${phoneNumberLimited}`
-		}
-		if (phoneNumberLimited.length <= 7) {
-			return `(${phoneNumberLimited.substring(0, 2)}) ${phoneNumberLimited.substring(2)}`
-		}
-		return `(${phoneNumberLimited.substring(0, 2)}) ${phoneNumberLimited.substring(2, 7)}-${phoneNumberLimited.substring(7)}`
+		const phone = value.replace(/\D/g, '').slice(0, 11)
+		if (phone.length <= 2) return `(${phone}`
+		if (phone.length <= 7) return `(${phone.slice(0, 2)}) ${phone.slice(2)}`
+		return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`
 	}
 
-	const onSubmit = async (data: RegisterFormValues) => {
+	const onSubmit = async (data: RegisterInput) => {
 		setIsSubmitting(true)
+		const result = await AuthServices.Register(data)
+		setIsSubmitting(false)
 
-		try {
-			console.log('Dados de registro:', data)
-		} catch (error) {
-			console.error('Erro no registro:', error)
-		} finally {
-			setIsSubmitting(false)
+		if (result instanceof Error) {
+			toast.error(result.message)
+			return
 		}
+
+		contextLogin(result)
+		toast.success(result.message)
+		navigate('/')
 	}
+
+	useEffect(() => {
+			logout()
+		}, []);
+
 
 	return (
 		<div className="flex items-center justify-center min-h-[80vh]">
@@ -295,7 +249,7 @@ export const Register = () => {
 							</div>
 						</CardContent>
 						<CardFooter className="flex flex-col space-y-4">
-							<Button type="submit" className="w-full" disabled={isSubmitting}>
+							<Button type="submit" className="w-full" disabled={isSubmitting || !isValid}>
 								{isSubmitting ? 'Criando conta...' : 'Criar conta'}
 							</Button>
 							<div className="text-center text-sm">
