@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from './ui/button'
+import { useAuth } from '@/context/AuthContext'
 
 export const Navbar = () => {
 	const location = useLocation()
+	const { user, logout } = useAuth()
 
 	const isAuthPage =
 		location.pathname.startsWith('/login') ||
@@ -17,9 +19,23 @@ export const Navbar = () => {
 
 				{!isAuthPage && (
 					<div className="flex items-center gap-4">
-						<Link to="login">
-							<Button size="sm">Entrar</Button>
-						</Link>
+						{user ? (
+							<>
+								<span className="text-sm">Olá, {user.name}</span>
+								<Button size="sm" variant="outline" onClick={logout}>
+									Logout
+								</Button>
+							</>
+						) : (
+							<>
+								<Link to="/login">
+									<Button size="sm">Entrar</Button>
+								</Link>
+								<Link to="/register">
+									<Button size="sm" variant="outline">Cadastrar</Button>
+								</Link>
+							</>
+						)}
 					</div>
 				)}
 			</div>
