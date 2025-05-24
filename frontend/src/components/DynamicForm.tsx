@@ -20,15 +20,18 @@ import { QuestionItem } from './QuestionItem'
 import { QuestionnairePreview } from './QuestionnairePreview'
 import { toast } from 'sonner'
 import { QuestionnaireFormData, questionnaireSchema } from '@/schemas/form'
+import { useNavigate, useParams } from 'react-router-dom'
+import { FormServices } from '@/services/FormServices'
 
 export const DynamicForm = () => {
+	const { id } = useParams<{ id: string }>()
+	const isEditMode = Boolean(id)
+	const navigate = useNavigate()
+	const [isSubmitting, setIsSubmitting] = useState(false)
+
 	const form = useForm<QuestionnaireFormData>({
 		resolver: zodResolver(questionnaireSchema),
-		defaultValues: {
-			title: '',
-			description: '',
-			questions: [],
-		},
+		defaultValues: { title: '', description: '', questions: [] },
 		mode: 'onChange',
 	})
 
@@ -37,74 +40,60 @@ export const DynamicForm = () => {
 		register,
 		handleSubmit,
 		trigger,
+		reset,
 		formState: { errors },
 	} = form
 
-	const questions = useFieldArray<QuestionnaireFormData>({
-		control,
-		name: 'questions',
-	})
+	const questions = useFieldArray<QuestionnaireFormData>({ control, name: 'questions' })
 
-	const [currentStep, setCurrentStep] = useState(0)
-	const [draggingIndex, setDraggingIndex] = useState<null | number>(null)
+	useEffect(() => {
+		if (isEditMode) {
+			; (async () => {
+				const result = await FormServices.GetById(id!)
+				if (result instanceof Error) {
+					toast.error('Erro ao carregar formulário')
+					navigate('/')
+					return
+				}
+				const { questionnaire } = result
+				reset({
+					title: questionnaire.title,
+					description: questionnaire.description,
+					questions: questionnaire.questions.map(q => ({
+						title: q.title,
+						type: q.type,
+						required: q.required,
+						alternatives: q.alternatives,
+					})),
+				})
+			})()
+		}
+	}, [id, isEditMode, navigate, reset])
+
+	useEffect(() => {
+		const sub = form.watch(val => sessionStorage.setItem('questionnaire-form', JSON.stringify(val)))
+		return () => sub.unsubscribe()
+	}, [form])
 
 	const steps = [
-		{
-			title: 'Informações básicas',
-			description: 'Defina o título e descrição do seu questionário',
-		},
-		{
-			title: 'Perguntas',
-			description: 'Adicione e configure as perguntas do seu questionário',
-		},
-		{
-			title: 'Pré-visualização',
-			description: 'Veja como seu questionário ficará para os respondentes',
-		},
+		{ title: 'Informações básicas', description: 'Defina o título e descrição do seu questionário' },
+		{ title: 'Perguntas', description: 'Adicione e configure as perguntas' },
+		{ title: 'Pré-visualização', description: 'Veja como seu questionário ficará' },
 	]
 
-	useEffect(() => {
-		const savedData = sessionStorage.getItem('questionnaire-form')
-		if (savedData) {
-			try {
-				form.reset(JSON.parse(savedData))
-			} catch (error) {
-				console.error('Erro ao carregar dados salvos:', error)
-			}
-		}
-	}, [form])
+	const [currentStep, setCurrentStep] = useState(0)
+	const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
 
-	useEffect(() => {
-		const subscription = form.watch((value) => {
-			sessionStorage.setItem('questionnaire-form', JSON.stringify(value))
-		})
-		return () => subscription.unsubscribe()
-	}, [form])
-
-	const handleDragStart = (index: number) => {
-		setDraggingIndex(index)
+	const handleDragStart = (idx: number) => setDraggingIndex(idx)
+	const handleDragEnd = () => setDraggingIndex(null)
+	const handleReorder = (newOrder: FieldArrayWithId<QuestionnaireFormData>[]) => {
+		if (draggingIndex === null || !questions.fields[draggingIndex]) return
+		const dragging = questions.fields[draggingIndex]
+		newOrder.forEach((item, i) => item.id === dragging.id && questions.move(draggingIndex, i))
+		setDraggingIndex(newOrder.findIndex(f => f.id === dragging.id))
 	}
 
-	const handleDragEnd = () => {
-		setDraggingIndex(null)
-	}
-
-	const handleReorder = (
-		newOrder: FieldArrayWithId<QuestionnaireFormData>[]
-	) => {
-		if (draggingIndex === null) return
-
-		const draggingQuestion = questions.fields[draggingIndex]
-
-		newOrder.forEach((question, index) => {
-			if (question === draggingQuestion) {
-				questions.move(draggingIndex, index)
-				setDraggingIndex(index)
-			}
-		})
-	}
-
-	const handleAddQuestion = () => {
+	const handleAddQuestion = () =>
 		questions.append({
 			title: '',
 			type: 'multiple_choice',
@@ -114,14 +103,6 @@ export const DynamicForm = () => {
 				{ text: '', isCorrect: false },
 			],
 		})
-	}
-
-	const onSubmit = async (data: QuestionnaireFormData) => {
-		console.log('Questionário finalizado:', data)
-
-		sessionStorage.removeItem('questionnaire-form')
-		alert('Questionário salvo com sucesso!')
-	}
 
 	const formatErrors = useCallback(
 		(errors: FieldErrors<QuestionnaireFormData>) => {
@@ -163,46 +144,44 @@ export const DynamicForm = () => {
 		[]
 	)
 
-	const showErrors = (errors: FieldErrors<QuestionnaireFormData>) => {
-		const formatedErros = formatErrors(errors)
-		if (formatedErros.length > 0) {
-			toast('Corrija os erros abaixo:', {
-				description: (
-					<ul className="list-disc pl-4 mt-2 space-y-1">
-						{formatedErros.map((message, i) => (
-							<li key={i} className="text-sm text-black">
-								{message}
-							</li>
-						))}
-					</ul>
-				),
-				duration: 5000,
-			})
+
+	const showErrors = (errs: FieldErrors<QuestionnaireFormData>) => {
+		const msgs = formatErrors(errs)
+		if (msgs.length) toast('Corrija os erros:', { description: (<ul className="list-disc pl-4 mt-2 space-y-1">{msgs.map((m, i) => <li key={i}>{m}</li>)}</ul>), duration: 5000 })
+	}
+
+	const canAdvance = async () =>
+		currentStep === 0
+			? trigger(['title', 'description'])
+			: currentStep === 1
+				? trigger('questions')
+				: true
+
+	const onSubmit = async (data: QuestionnaireFormData) => {
+		setIsSubmitting(true)
+		try {
+			const result = isEditMode ? await FormServices.Update(id!, data) : await FormServices.Create(data)
+
+			if (result instanceof Error) toast.error(result.message)
+			else {
+				toast.success(isEditMode ? 'Formulário atualizado!' : 'Formulário criado!')
+				reset()
+				navigate('/')
+			}
+		} catch {
+			toast.error('Erro inesperado')
+		} finally {
+			setIsSubmitting(false)
 		}
 	}
 
-	const nextStep = () => {
-		setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1))
-	}
-
-	const prevStep = () => {
-		setCurrentStep((prev) => Math.max(prev - 1, 0))
-	}
-
-	const canAdvance = async () => {
-		if (currentStep === 0) {
-			return trigger(['title', 'description'])
-		}
-		if (currentStep === 1) {
-			return trigger('questions')
-		}
-		return true
-	}
+	const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))
+	const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0))
 
 	return (
 		<div className="flex flex-col gap-8">
 			<div className="flex flex-col space-y-1">
-				<h1 className="text-3xl font-bold">Criação de Questionário</h1>
+				<h1 className="text-3xl font-bold">{isEditMode ? 'Edição de Questionário' : 'Criação de Questionário'}</h1>
 				<p className="text-muted-foreground">
 					Elabore seu questionário personalizado adicionando diferentes tipos de
 					perguntas
@@ -312,11 +291,10 @@ export const DynamicForm = () => {
 													<Reorder.Item
 														key={question.id}
 														value={question}
-														className={`border rounded-md ${
-															draggingIndex === index
-																? 'border-primary bg-primary/5'
-																: ''
-														}`}
+														className={`border rounded-md ${draggingIndex === index
+															? 'border-primary bg-primary/5'
+															: ''
+															}`}
 														onDragStart={() => handleDragStart(index)}
 														onDragEnd={handleDragEnd}
 													>
@@ -362,6 +340,7 @@ export const DynamicForm = () => {
 									) : (
 										<Button
 											type="button"
+											disabled={isSubmitting}
 											onClick={handleSubmit(onSubmit, showErrors)}
 										>
 											<Save className="h-4 w-4 mr-2" />

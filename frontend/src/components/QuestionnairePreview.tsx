@@ -2,8 +2,8 @@ import { Label } from '@radix-ui/react-label'
 import { Separator } from '@radix-ui/react-select'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
 import { Textarea } from './ui/textarea'
-import { QuestionnaireFormData } from '@/schema'
 import { Badge } from './ui/badge'
+import { QuestionnaireFormData } from '@/schemas/form'
 
 export const QuestionnairePreview = ({
 	formData,

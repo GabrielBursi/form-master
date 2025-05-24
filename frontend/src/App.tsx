@@ -6,6 +6,7 @@ import { QuestionnaireBuilder } from './pages/QuestionnaireBuilder'
 import { NotFound } from './pages/NotFound'
 import { Login } from './pages/Login'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { FormDetailPage } from './pages/FormDetails'
 
 const ProtectedRoute = () => {
 	const { user } = useAuth()
@@ -27,7 +28,9 @@ function App() {
 						<Route path="/register" element={<Register />} />
 						<Route path="/" element={<Home />} />
 						<Route element={<ProtectedRoute />}>
-							<Route path="/questionnaire-builder" element={<QuestionnaireBuilder />} />
+							<Route path="/forms/new" element={<QuestionnaireBuilder />} />
+							<Route path="/forms/:id/edit" element={<QuestionnaireBuilder />} />
+							<Route path="/forms/:id" element={<FormDetailPage />} />
 						</Route>
 						<Route path="*" element={<NotFound />} />
 					</Route>

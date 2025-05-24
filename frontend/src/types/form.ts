@@ -1,6 +1,6 @@
 import { QuestionnaireFormData } from "@/schemas/form"
 
-interface Questionnaire extends QuestionnaireFormData {
+export interface Questionnaire extends QuestionnaireFormData {
 	_id: string
 	userId: string
 	createdAt: string
