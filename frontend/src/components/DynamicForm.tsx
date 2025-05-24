@@ -18,8 +18,8 @@ import { Label } from './ui/label'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { QuestionItem } from './QuestionItem'
 import { QuestionnairePreview } from './QuestionnairePreview'
-import { QuestionnaireFormData, questionnaireSchema } from '@/schema'
 import { toast } from 'sonner'
+import { QuestionnaireFormData, questionnaireSchema } from '@/schemas/form'
 
 export const DynamicForm = () => {
 	const form = useForm<QuestionnaireFormData>({
