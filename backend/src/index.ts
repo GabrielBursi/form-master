@@ -3,6 +3,7 @@ import cors from 'cors';
 import { connectDB } from './config/database';
 import { authRouter } from './routes/auth';
 import { userRouter } from './routes/user';
+import { formRouter } from './routes/form';
 
 connectDB();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
+app.use('/api/forms', formRouter);
 
 app.get('/', (_req, res) => {
 	res.json({ message: 'API funcionando!' });
