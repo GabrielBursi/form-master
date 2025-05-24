@@ -1,45 +1,86 @@
 # FormMaster: Plataforma Dinâmica de Cadastro e Questionários
 
-Este é um projeto desenvolvido para colocar em prática conceitos avançados de formulários com React Hook Form vistos no curso [JStack](https://jstack.com.br), integrando técnicas de formulários dinâmicos e wizard/multi-step. Inspirado em desafios reais de UX e interatividade, o objetivo principal é permitir que o usuário crie um perfil completo e, ao mesmo tempo, elabore um questionário personalizado com funcionalidades como adição, remoção e reordenação dinâmica dos campos.
+**FormMaster** é uma aplicação fullstack desenvolvida como prática dos conceitos do curso [JStack](https://jstack.com.br), com foco em formulários dinâmicos e multi-etapas no frontend, integrando autenticação e persistência de dados no backend com Node.js, Express e MongoDB.
 
-Além dessas funcionalidades, o projeto explora conceitos avançados, como validação condicional, persistência de dados em sessionStorage e animações de transição utilizando Framer Motion para uma experiência fluida e intuitiva.
+O sistema permite que usuários criem perfis com informações completas e elaborem questionários personalizados, com controle total sobre o conteúdo das perguntas e tipos de resposta. O backend garante segurança e integridade, exigindo autenticação para ações sensíveis como a criação de formulários.
+
+---
+
+### 🔐 Autenticação e Regras de Acesso
+
+* **JWT (JSON Web Token):** Apenas usuários autenticados podem criar formulários.
+* **Hash de Senha:** As senhas são armazenadas com segurança utilizando bcrypt.
+* **Relacionamento 1\:N:** Cada usuário pode criar múltiplos formulários (questionários).
 
 ---
 
 ### 🔧 Funcionalidades do Projeto
 
 #### 👤 Cadastro e Onboarding Dinâmico
-- **Dados Pessoais:** Cadastro com nome, e-mail, senha e validação utilizando Zod.
-- **Múltiplos Endereços e Contatos:** Adição e remoção dinâmica de campos para endereços e telefones.
-- **Preferências e Interesses:** Seleção de múltiplas opções com feedback visual e validação condicional.
+
+* Cadastro com nome, e-mail, senha, telefone e profissão.
+* Validação robusta utilizando **Zod** no frontend.
+* Hash automático de senha e verificação com bcrypt no backend.
 
 #### 📝 Criação Personalizada de Questionários
-- **Definição de Perguntas:** Permite ao usuário criar perguntas dinâmicas, escolhendo entre diferentes tipos (múltipla escolha, resposta aberta, escala, etc.).
-- **Alternativas Dinâmicas:** Inclusão, remoção e reordenação de alternativas para perguntas de múltipla escolha utilizando drag & drop.
-- **Preview e Ajustes:** Etapa de revisão onde o usuário visualiza o questionário completo e pode editar ou reorganizar os itens.
+
+* Criação de perguntas dinâmicas com diferentes tipos:
+
+  * Múltipla escolha
+  * Aberta
+  * Escala (com valor mínimo e máximo)
+  * Booleana (Sim/Não)
+* Definição de alternativas dinâmicas e interativas.
+* Suporte a perguntas obrigatórias e opcionais.
 
 #### 🚀 Funcionalidades Avançadas
-- **Validação Avançada:** Validações em tempo real em cada etapa utilizando Zod para garantir a integridade dos dados antes de avançar.
-- **Persistência de Dados:** Salvamento dos dados no sessionStorage para prevenir perda de informações durante o fluxo.
-- **Interatividade e Animações:** Transições suaves entre etapas com Framer Motion para aprimorar a experiência do usuário.
-- **Integração com API Simulada:** Simulação de chamadas a API para envio dos dados e práticas de integração backend (pode ser estendido com JSON Server ou similar).
+
+* **Validação em Tempo Real:** Cada etapa é validada com Zod antes de avançar.
+* **Persistência de Dados:** Uso de `sessionStorage` no frontend para evitar perda de progresso.
+* **Transições com Framer Motion:** Animações suaves entre as etapas do formulário.
+* **Integração com Backend Real:** A API está implementada com Express, Mongoose e autenticação JWT, com endpoints organizados e testados via Postman.
 
 ---
 
-### 🛠️ Tecnologias Utilizadas
+### ⚙️ Tecnologias Utilizadas
 
 #### Frontend
-- **React**: Biblioteca principal para criação das interfaces.
-- **React Hook Form**: Gerenciamento de formulários e validação de dados.
-- **Zod**: Validação de esquemas e dados de entrada.
-- **Framer Motion**: Animações e interatividade.
-- **Tailwind CSS + shadcn/ui**: Estilização rápida e customizável da interface.
+
+* **React**
+* **React Hook Form**
+* **Zod**
+* **Framer Motion**
+* **Tailwind CSS** + **shadcn/ui**
+
+#### Backend
+
+* **Node.js** + **Express**
+* **Mongoose** (ODM para MongoDB)
+* **JWT** para autenticação
+* **Bcrypt** para hash de senhas
+* **Zod** para validação dos dados de entrada
+* **TypeScript** para maior segurança no desenvolvimento
 
 ---
 
-### 📚 Conteúdo Baseado nos Estudos
+### 🗃️ Estrutura do Banco de Dados
 
-Este projeto aplica os seguintes conceitos abordados no curso:
-- **Formulários Dinâmicos:** Criação e manipulação de arrays de campos com React Hook Form.
-- **Wizard / Multi-Step Forms:** Implementação de fluxo de cadastro dividido em etapas lógicas.
-- **Validação e Persistência:** Uso de Zod para validação e sessionStorage para preservação dos dados.
+* **User**
+
+  * name, email, password (hash), phone, profession
+  * timestamps automáticos
+  * método `comparePassword` para autenticação
+* **Questionnaire (Form)**
+
+  * title, description, questions\[], userId (referência a `User`)
+  * cada `question` pode conter alternativas, valores mínimos/máximos e tipo
+  * relacionamento com usuário via `userId`
+
+---
+
+### 📚 Conteúdo Aplicado dos Estudos
+
+* React Hook Form + Zod para formulários complexos
+* Multi-step Forms com persistência
+* Express API com autenticação JWT
+* Mongoose e relacionamento entre coleções
